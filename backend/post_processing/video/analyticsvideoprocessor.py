@@ -134,7 +134,6 @@ class AnalyticsVideoProcessor(VideoProcessor):
                 if current_index[key] < len(self.participant_data[key]) - 1:
                     current_index[key] += 1
 
-    ##### Helper Methods
     async def generate_csv(self, data: List[dict], output_path: str):
         loop = asyncio.get_event_loop()
         await loop.run_in_executor(None, self._write_csv, data, output_path)
