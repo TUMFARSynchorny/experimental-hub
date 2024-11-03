@@ -1,7 +1,13 @@
 """Provide the `Connection` and `SubConnection` classes."""
 
 from __future__ import annotations
+
+import asyncio
+import json
+import logging
 from typing import Any, Callable, Coroutine, Tuple
+
+import shortuuid
 from aiortc import (
     RTCPeerConnection,
     RTCDataChannel,
@@ -10,13 +16,11 @@ from aiortc import (
     RTCRtpSender,
     RTCIceCandidate,
 )
+from aiortc.contrib.media import MediaRelay
 from aiortc.sdp import candidate_from_sdp
 
-import shortuuid
-import asyncio
-import logging
-import json
-
+from connection.connection_interface import ConnectionInterface
+from connection.connection_state import ConnectionState, parse_connection_state
 from connection.messages import (
     ConnectionAnswerDict,
     ConnectionOfferDict,
@@ -24,20 +28,17 @@ from connection.messages import (
     AddIceCandidateDict,
 )
 from connection.sub_connection import SubConnection
-from hub.track_handler import TrackHandler
-from hub.exceptions import ErrorDictException
-from connection.connection_interface import ConnectionInterface
-from connection.connection_state import ConnectionState, parse_connection_state
-from hub.record_handler import RecordHandler
-
+from connection.util import find_participant_asymmetric_filter
 from custom_types.error import ErrorDict
+from custom_types.message import MessageDict, is_valid_messagedict
+from filter_api import FilterAPIInterface
 from filters import FilterDict
 from filters.filter_data_dict import FilterDataDict
-from filter_api import FilterAPIInterface
-from custom_types.message import MessageDict, is_valid_messagedict
+from hub.exceptions import ErrorDictException
+from hub.record_handler import RecordHandler
+from hub.track_handler import TrackHandler
+from session.data.participant import ParticipantDict
 from session.data.participant.participant_summary import ParticipantSummaryDict
-
-from aiortc.contrib.media import MediaRelay
 
 
 class Connection(ConnectionInterface):
@@ -78,14 +79,20 @@ class Connection(ConnectionInterface):
     _audio_record_handler: RecordHandler
     _video_record_handler: RecordHandler
     _raw_video_record_handler: RecordHandler
+    _filter_api: FilterAPIInterface
+    _video_track: MediaStreamTrack
+    _audio_track: MediaStreamTrack
+    _relay: MediaRelay
+    _sub_connection_video_track_handlers: dict[str, TrackHandler]
+    _sub_connection_audio_track_handlers: dict[str, TrackHandler]
 
     def __init__(
-        self,
-        pc: RTCPeerConnection,
-        message_handler: Callable[[MessageDict], Coroutine[Any, Any, None]],
-        log_name_suffix: str,
-        filter_api: FilterAPIInterface,
-        record_data: tuple,
+            self,
+            pc: RTCPeerConnection,
+            message_handler: Callable[[MessageDict], Coroutine[Any, Any, None]],
+            log_name_suffix: str,
+            filter_api: FilterAPIInterface,
+            record_data: tuple,
     ) -> None:
         """Create new Connection based on a aiortc.RTCPeerConnection.
 
@@ -121,6 +128,9 @@ class Connection(ConnectionInterface):
         self._message_handler = message_handler
         self._incoming_audio = TrackHandler("audio", self, filter_api)
         self._incoming_video = TrackHandler("video", self, filter_api)
+        self._relay = MediaRelay()
+        self._sub_connection_audio_track_handlers = dict()
+        self._sub_connection_video_track_handlers = dict()
 
         (record, record_to) = record_data
         self._audio_record_handler = RecordHandler(
@@ -139,18 +149,24 @@ class Connection(ConnectionInterface):
 
         self._dc = None
         self._tasks = []
-
+        self._filter_api = filter_api
         # Register event handlers
         pc.add_listener("datachannel", self._on_datachannel)
         pc.add_listener("connectionstatechange", self._on_connection_state_change)
         pc.add_listener("track", self._on_track)
 
+    def _set_video_track(self, track: MediaStreamTrack):
+        self._video_track = track
+
+    def _set_audio_track(self, track: MediaStreamTrack):
+        self._audio_track = track
+
     async def complete_setup(
-        self,
-        audio_filters: list[FilterDict],
-        video_filters: list[FilterDict],
-        audio_group_filters: list[FilterDict],
-        video_group_filters: list[FilterDict],
+            self,
+            audio_filters: list[FilterDict],
+            video_filters: list[FilterDict],
+            audio_group_filters: list[FilterDict],
+            video_group_filters: list[FilterDict],
     ) -> None:
         """Complete Connection setup.
 
@@ -230,21 +246,59 @@ class Connection(ConnectionInterface):
         # For docstring see ConnectionInterface or hover over function declaration
         return self._state
 
-    async def create_subscriber_proposal(
-        self, participant_summary: ParticipantSummaryDict | str | None
-    ) -> ConnectionProposalDict:
-        # For docstring see ConnectionInterface or hover over function declaration
+    async def _create_sub_connection_media_tracks(
+            self,
+            sub_connection_id: str,
+            participant_summary: ParticipantSummaryDict | str | None,
+            subscriber: ParticipantDict | None = None
+    ) -> tuple[TrackHandler, TrackHandler] | tuple[MediaStreamTrack, MediaStreamTrack]:
+        if subscriber is not None:
+            asymmetric_filter = find_participant_asymmetric_filter(participant_summary, subscriber)
+            if asymmetric_filter is not None:
+                audio_track_handler = TrackHandler("audio", self, self._filter_api)
+                video_track_handler = TrackHandler("video", self, self._filter_api)
+                await asyncio.gather(
+                    audio_track_handler.complete_setup(asymmetric_filter["audio_filters"],
+                                                       subscriber["audio_group_filters"]),
+                    audio_track_handler.set_track(self._relay.subscribe(self._audio_track, False)),
+                    video_track_handler.complete_setup(asymmetric_filter["video_filters"],
+                                                       subscriber["video_group_filters"]),
+                    video_track_handler.set_track(self._relay.subscribe(self._video_track, False))
 
-        subconnection_id = shortuuid.uuid()
+                )
+                self._sub_connection_audio_track_handlers[sub_connection_id] = audio_track_handler
+                self._sub_connection_video_track_handlers[sub_connection_id] = video_track_handler
+                return audio_track_handler, video_track_handler
+
+        return self._incoming_audio.subscribe(), self._incoming_video.subscribe()
+
+    async def _create_sub_connection(
+            self,
+            participant_summary: ParticipantSummaryDict | str | None,
+            subscriber: ParticipantDict | None = None
+    ) -> SubConnection:
+        sub_connection_id = shortuuid.uuid()
+        audio_track, video_track = await self._create_sub_connection_media_tracks(
+            sub_connection_id,
+            participant_summary,
+            subscriber
+        )
         sc = SubConnection(
-            subconnection_id,
-            self._incoming_video.subscribe(),
-            self._incoming_audio.subscribe(),
+            sub_connection_id,
+            video_track,
+            audio_track,
             participant_summary,
             self._log_name_suffix,
         )
         sc.add_listener("connection_closed", self._handle_closed_subconnection)
-        self._sub_connections[subconnection_id] = sc
+        self._sub_connections[sub_connection_id] = sc
+        return sc
+
+    async def create_subscriber_proposal(
+            self, participant_summary: ParticipantSummaryDict | str | None,
+            subscriber: ParticipantDict | None = None
+    ) -> ConnectionProposalDict:
+        sc: SubConnection = await self._create_sub_connection(participant_summary, subscriber)
         return sc.proposal
 
     async def handle_add_ice_candidate(self, candidate: RTCIceCandidate):
@@ -265,7 +319,7 @@ class Connection(ConnectionInterface):
         await self._main_pc.addIceCandidate(rtc_candidate)
 
     async def handle_subscriber_offer(
-        self, offer: ConnectionOfferDict
+            self, offer: ConnectionOfferDict
     ) -> ConnectionAnswerDict:
         # For docstring see ConnectionInterface or hover over function declaration
         subconnection_id = offer["id"]
@@ -284,7 +338,7 @@ class Connection(ConnectionInterface):
         return await sc.handle_offer(offer_description)
 
     async def handle_subscriber_add_ice_candidate(
-        self, candidate: AddIceCandidateDict
+            self, candidate: AddIceCandidateDict
     ):
         # For docstring see ConnectionInterface or hover over function declaration
         subconnection_id = candidate["id"]
@@ -328,11 +382,16 @@ class Connection(ConnectionInterface):
             self._incoming_video.muted = video
         if self._incoming_audio is not None:
             self._incoming_audio.muted = audio
+        for sub_connection_id in self._sub_connection_video_track_handlers:
+            self._sub_connection_video_track_handlers[sub_connection_id].muted = video
+        for sub_connection_id in self._sub_connection_audio_track_handlers:
+            self._sub_connection_audio_track_handlers[sub_connection_id].muted = audio
 
     async def start_recording(self) -> None:
         # For docstring see ConnectionInterface or hover over function declaration
         await asyncio.gather(
-            self._video_record_handler.start(), self._raw_video_record_handler.start(), self._audio_record_handler.start()
+            self._video_record_handler.start(), self._raw_video_record_handler.start(),
+            self._audio_record_handler.start()
         )
 
     async def stop_recording(self) -> None:
@@ -350,13 +409,13 @@ class Connection(ConnectionInterface):
         await self._incoming_audio.set_filters(filters)
 
     async def set_video_group_filters(
-        self, group_filters: list[FilterDict], ports: list[tuple[int, int]]
+            self, group_filters: list[FilterDict], ports: list[tuple[int, int]]
     ) -> None:
         # For docstring see ConnectionInterface or hover over function declaration
         await self._incoming_video.set_group_filters(group_filters, ports)
 
     async def set_audio_group_filters(
-        self, group_filters: list[FilterDict], ports: list[tuple[int, int]]
+            self, group_filters: list[FilterDict], ports: list[tuple[int, int]]
     ) -> None:
         # For docstring see ConnectionInterface or hover over function declaration
         await self._incoming_audio.set_group_filters(group_filters, ports)
@@ -373,6 +432,14 @@ class Connection(ConnectionInterface):
         self._logger.debug(f"Remove sub connection {subconnection_id}")
         self._sub_connections.pop(subconnection_id)
         self._logger.debug(f"SubConnections after removing: {self._sub_connections}")
+        if subconnection_id in self._sub_connection_video_track_handlers:
+            self._sub_connection_video_track_handlers.pop(subconnection_id)
+            self._logger.debug(
+                f"Sub-connection video track handler after removing: {self._sub_connection_video_track_handlers}")
+        if subconnection_id in self._sub_connection_audio_track_handlers:
+            self._sub_connection_audio_track_handlers.pop(subconnection_id)
+            self._logger.debug(
+                f"Sub-connection audio track handler after removing: {self._sub_connection_audio_track_handlers}")
 
     def _on_datachannel(self, channel: RTCDataChannel) -> None:
         """Handle new incoming datachannel.
@@ -396,10 +463,10 @@ class Connection(ConnectionInterface):
     async def _check_if_closed(self) -> None:
         """Check if this Connection is closed and should stop."""
         if (
-            self._incoming_audio is not None
-            and self._incoming_video is not None
-            and self._incoming_audio.readyState == "ended"
-            and self._incoming_video.readyState == "ended"
+                self._incoming_audio is not None
+                and self._incoming_video is not None
+                and self._incoming_audio.readyState == "ended"
+                and self._incoming_video.readyState == "ended"
         ):
             self._logger.debug("All incoming tracks are closed -> stop connection")
             await self.stop()
@@ -490,6 +557,7 @@ class Connection(ConnectionInterface):
         self._logger.debug(f"{track.kind} track received")
         if track.kind == "audio":
             task = asyncio.create_task(self._incoming_audio.set_track(track))
+            self._set_audio_track(track)
             sender = self._main_pc.addTrack(self._incoming_audio.subscribe())
             self._audio_record_handler.add_track(self._incoming_audio.subscribe())
             self._listen_to_track_close(self._incoming_audio, sender)
@@ -497,6 +565,7 @@ class Connection(ConnectionInterface):
             # Use relay to be able to access track multiple times
             relay = MediaRelay()
             task = asyncio.create_task(self._incoming_video.set_track(relay.subscribe(track, False)))
+            self._set_video_track(track)
             sender = self._main_pc.addTrack(self._incoming_video.subscribe())
             self._video_record_handler.add_track(self._incoming_video.subscribe())
             self._raw_video_record_handler.add_track(relay.subscribe(track, False))
@@ -538,15 +607,15 @@ ConnectionInterface.register(Connection)
 
 
 async def connection_factory(
-    offer: RTCSessionDescription,
-    message_handler: Callable[[MessageDict], Coroutine[Any, Any, None]],
-    log_name_suffix: str,
-    audio_filters: list[FilterDict],
-    video_filters: list[FilterDict],
-    audio_group_filters: list[FilterDict],
-    video_group_filters: list[FilterDict],
-    filter_api: FilterAPIInterface,
-    record_data: list,
+        offer: RTCSessionDescription,
+        message_handler: Callable[[MessageDict], Coroutine[Any, Any, None]],
+        log_name_suffix: str,
+        audio_filters: list[FilterDict],
+        video_filters: list[FilterDict],
+        audio_group_filters: list[FilterDict],
+        video_group_filters: list[FilterDict],
+        filter_api: FilterAPIInterface,
+        record_data: list,
 ) -> Tuple[RTCSessionDescription, Connection]:
     """Instantiate Connection.
 

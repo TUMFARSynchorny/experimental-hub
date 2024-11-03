@@ -69,6 +69,17 @@ export const openSessionSlice = createSlice({
           });
         }
       });
+
+      state.session.participants.map(({ asymmetric_filters }) => {
+        if (asymmetric_filters.length > 0) {
+          asymmetric_filters.push({
+            id: payload.asymmetric_filters_id,
+            participant_name: payload.participant_name,
+            audio_filters: payload.audio_filters,
+            video_filters: payload.video_filters
+          });
+        }
+      });
     },
 
     changeParticipant: (
@@ -89,6 +100,19 @@ export const openSessionSlice = createSlice({
           }
         }
       });
+
+      state.session.participants.map(({ asymmetric_filters }) => {
+        if (asymmetric_filters.length > 0) {
+          const changedParticipantAsymmetryIndex = asymmetric_filters.findIndex(
+            (asymmetricFilter) => asymmetricFilter.id === participant.asymmetric_filters_id
+          );
+
+          if (changedParticipantAsymmetryIndex !== -1) {
+            asymmetric_filters[changedParticipantAsymmetryIndex].participant_name =
+              participant.participant_name;
+          }
+        }
+      });
     },
 
     deleteParticipant: (state, { payload }: PayloadAction<number>) => {
@@ -101,6 +125,12 @@ export const openSessionSlice = createSlice({
       state.session.participants.map(({ view }, index) => {
         state.session.participants[index].view = view.filter(
           (canvasElement) => canvasElement.id !== deletedParticipant.canvas_id
+        );
+      });
+
+      state.session.participants.map(({ asymmetric_filters }, index) => {
+        state.session.participants[index].asymmetric_filters = asymmetric_filters.filter(
+          (asymmetricFilter) => asymmetricFilter.id !== deletedParticipant.asymmetric_filters_id
         );
       });
 

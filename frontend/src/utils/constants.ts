@@ -51,7 +51,9 @@ export const INITIAL_PARTICIPANT_DATA: Participant = {
     height: 250
   },
   view: [],
-  canvas_id: ""
+  canvas_id: "",
+  asymmetric_filters: [],
+  asymmetric_filters_id: ""
 };
 
 export const INITIAL_NOTE_DATA: Note = {
@@ -71,13 +73,13 @@ export const INITIAL_CHAT_DATA: ChatMessage = {
  * Environment of the client. Set by CreateReactApp depending on how you start it.
  * @type {("development" | "test" | "production")}
  */
-export const ENVIRONMENT = process.env.NODE_ENV; // "development", "test" or "production"
+export const ENVIRONMENT = import.meta.env.NODE_ENV; // "development", "test" or "production"
 
 /**
  * Backend address.
  */
 export const BACKEND =
-  ENVIRONMENT === "production" ? window.location.origin : process.env.REACT_APP_BACKEND;
+  ENVIRONMENT === "production" ? window.location.origin : import.meta.env.VITE_BACKEND;
 
 /**
  * Optional ICE servers.
@@ -87,8 +89,8 @@ export const BACKEND =
 export const ICE_SERVERS = parseIceServers();
 
 function parseIceServers() {
-  const servers = process.env.REACT_APP_ICE_SERVERS;
-  console.log("REACT_APP_ICE_SERVERS", servers);
+  const servers = import.meta.env.VITE_ICE_SERVERS;
+  console.log("VITE_ICE_SERVERS", servers);
 
   if (!servers) {
     return undefined;

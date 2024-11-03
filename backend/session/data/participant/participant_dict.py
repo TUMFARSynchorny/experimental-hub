@@ -6,6 +6,7 @@ from typing import TypedDict
 
 from custom_types.chat_message import ChatMessageDict
 from custom_types.canvas_element import CanvasElementDict
+from custom_types.asymmetric_filter import AsymmetricFilterDict
 from filters import FilterDict
 from chat_filters import ChatFilterDict
 from session.data.position import PositionDict
@@ -56,6 +57,10 @@ class ParticipantDict(TypedDict):
         Asymmetric view of the participant
     canvas_id: str
         Unique id for the placement of the participant stream
+    asymmetric_filters : list of custom_types.asymmetric_filter.AsymmetricFilterDict
+        Active asymmetric filters for this participant.
+        asymmetric_filters_id : str
+        Unique id for the asymmetric filters
 
     See Also
     --------
@@ -84,3 +89,5 @@ class ParticipantDict(TypedDict):
     lastMessageReadTime: int
     view: list[CanvasElementDict]
     canvas_id: str
+    asymmetric_filters: list[AsymmetricFilterDict]
+    asymmetric_filters_id: str

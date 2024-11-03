@@ -106,6 +106,7 @@ function SessionOverview({ onDeleteSession, onJoinExperiment, onCreateExperiment
                   date={session.date}
                   description={session.description}
                   onClick={() => handleClick(session)}
+                  ongoing={session.creation_time > 0 && session.end_time === 0}
                   selected={session.id === selectedSession?.id}
                 />
               );

@@ -9,6 +9,7 @@ from connection.messages import (
     ConnectionProposalDict,
     RTCSessionDescriptionDict,
 )
+from hub.track_handler import TrackHandler
 from session.data.participant.participant_summary import ParticipantSummaryDict
 
 
@@ -28,19 +29,19 @@ class SubConnection(AsyncIOEventEmitter):
     _participant_summary: ParticipantSummaryDict | str | None
     _pc: RTCPeerConnection
 
-    _audio_track: MediaStreamTrack
-    _video_track: MediaStreamTrack
+    _audio_track: MediaStreamTrack | TrackHandler
+    _video_track: MediaStreamTrack | TrackHandler
 
     _closed: bool
     _logger: logging.Logger
 
     def __init__(
-        self,
-        id: str,
-        video_track: MediaStreamTrack,
-        audio_track: MediaStreamTrack,
-        participant_summary: ParticipantSummaryDict | str | None,
-        log_name_suffix: str,
+            self,
+            id: str,
+            video_track: MediaStreamTrack | TrackHandler,
+            audio_track: MediaStreamTrack | TrackHandler,
+            participant_summary: ParticipantSummaryDict | str | None,
+            log_name_suffix: str,
     ) -> None:
         """Initialize new SubConnection.
 
@@ -95,8 +96,8 @@ class SubConnection(AsyncIOEventEmitter):
             return
         self.emit("connection_closed", self.id)
 
-        self._audio_track.stop()
-        self._video_track.stop()
+        await self._audio_track.stop()
+        await self._video_track.stop()
 
         self._logger.debug("Closing SubConnection")
         self._closed = True

@@ -286,11 +286,13 @@ or connection is not fully connected"
                 return
 
             self._logger.debug(f"Adding subscriber: {repr(user)}")
+            from users import Participant
             if isinstance(user, _experimenter.Experimenter):
                 proposal = await self._connection.create_subscriber_proposal(self.id)
-            else:
+            elif isinstance(user, Participant):
                 proposal = await self._connection.create_subscriber_proposal(
-                    self.get_summary()
+                    self.get_summary(),
+                    user.get_participant_data()
                 )
 
             msg = MessageDict(type="CONNECTION_PROPOSAL", data=proposal)

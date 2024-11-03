@@ -1,0 +1,50 @@
+{
+    "id": "71546de822",
+    "title": "Use Me!",
+    "date": 1735659300000,
+    "record": false,
+    "time_limit": 0,
+    "description": "Use this experiment to text participants connection through ngrok and that the OpenFace filter is connected and working.",
+    "creation_time": 0,
+    "end_time": 0,
+    "start_time": 0,
+    "notes": [],
+    "participants": [
+        {
+            "id": "15323fc99c",
+            "participant_name": "P1",
+            "banned": false,
+            "size": {
+                "width": 250,
+                "height": 250
+            },
+            "muted_video": true,
+            "muted_audio": true,
+            "local_stream": false,
+            "position": {
+                "x": 72,
+                "y": 94,
+                "z": 0
+            },
+            "chat": [],
+            "audio_filters": [],
+            "video_filters": [
+                {
+                    "name": "OPENFACE_AU",
+                    "id": "3d528813-ad12-4baa-a246-ee44bcfb06aa",
+                    "channel": "video",
+                    "groupFilter": false,
+                    "config": {}
+                }
+            ],
+            "chat_filters": [],
+            "audio_group_filters": [],
+            "video_group_filters": [],
+            "lastMessageSentTime": 0,
+            "lastMessageReadTime": 0,
+            "view": [],
+            "canvas_id": "80ce9bf2-68cf-4836-a623-2641da878fee"
+        }
+    ],
+    "log": []
+}

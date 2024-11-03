@@ -16,3 +16,5 @@ sessions/*/
 # IDE
 .vscode
 .idea
+
+sessions/*.json

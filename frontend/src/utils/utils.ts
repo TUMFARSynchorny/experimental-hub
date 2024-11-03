@@ -1,5 +1,14 @@
-import * as moment from "moment";
-import { Box, Group, Participant, Session, Shape, CanvasElement } from "../types";
+import {
+  Box,
+  Group,
+  Participant,
+  Session,
+  Shape,
+  CanvasElement,
+  Filter,
+  AsymmetricFilter
+} from "../types";
+import moment from "moment";
 
 export const getRandomColor = () => {
   const letters = "0123456789ABCDEF";
@@ -160,6 +169,53 @@ export const getAsymmetricViewArray = (
   );
 
   return view;
+};
+
+export const getParticipantIdentifiers = (participants: Participant[]) => {
+  return participants.map((participant) => {
+    return {
+      id: participant.asymmetric_filters_id,
+      name: participant.participant_name,
+      audio_filters: participant.audio_filters,
+      video_filters: participant.video_filters
+    };
+  });
+};
+
+export const getAsymmetricParticipantIdentifiers = (asymmetricFilters: AsymmetricFilter[]) => {
+  return asymmetricFilters.map((filter) => {
+    return {
+      id: filter.id,
+      name: filter.participant_name,
+      audio_filters: filter.audio_filters,
+      video_filters: filter.video_filters
+    };
+  });
+};
+
+export const getAsymmetricFiltersArray = (
+  participantIdentifiers: Array<{
+    id: string;
+    name: string;
+    audio_filters: Filter[];
+    video_filters: Filter[];
+  }>,
+  asymmetric_filters_id: string | undefined
+): AsymmetricFilter[] => {
+  const filters: AsymmetricFilter[] = [];
+
+  participantIdentifiers.forEach((p) => {
+    if (asymmetric_filters_id !== p.id) {
+      filters.push({
+        id: p.id,
+        participant_name: p.name,
+        audio_filters: [...p.audio_filters],
+        video_filters: [...p.video_filters]
+      });
+    }
+  });
+
+  return filters;
 };
 
 /*

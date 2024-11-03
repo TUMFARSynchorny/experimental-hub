@@ -7,7 +7,7 @@ import {
   formatDate,
   generateRandomColor,
   getParticipantDimensions,
-  getRandomColor
+  getParticipantIdentifiers
 } from "../../utils/utils";
 
 import AddIcon from "@mui/icons-material/Add";
@@ -19,7 +19,7 @@ import Checkbox from "@mui/material/Checkbox";
 import FormControlLabel from "@mui/material/FormControlLabel";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { ActionButton, ActionIconButton } from "../../components/atoms/Button";
 import CustomSnackbar from "../../components/atoms/CustomSnackbar/CustomSnackbar";
 import { useAppDispatch, useAppSelector } from "../../redux/hooks";
@@ -28,7 +28,6 @@ import {
   changeParticipant,
   changeValue,
   deleteParticipant,
-  initializeSession,
   selectNumberOfParticipants,
   selectOpenSession
 } from "../../redux/slices/openSessionSlice";
@@ -52,6 +51,9 @@ function SessionForm({ onSendSessionToBackend, onGetFiltersConfig }) {
   const [participantDimensions, setParticipantDimensions] = useState(
     getParticipantDimensions(sessionData.participants ? sessionData.participants : [])
   );
+  const [participantIdentifiers, setParticipantIdentifiers] = useState(
+    getParticipantIdentifiers(sessionData.participants ? sessionData.participants : [])
+  );
 
   // It is used as flags to display warning notifications upon entry of incorrect data/not saved in the Participant Modal.
   // It is displayed here instead of in the Participant Modal itself, since upon closing the modal it is no longer
@@ -70,6 +72,10 @@ function SessionForm({ onSendSessionToBackend, onGetFiltersConfig }) {
       setYAxis(0);
     }
   }, [openSession]);
+
+  useEffect(() => {
+    setParticipantIdentifiers(getParticipantIdentifiers(sessionData.participants));
+  }, [sessionData.participants]);
 
   useEffect(() => {
     if (snackbarResponse.newParticipantInputEmpty) {
@@ -121,10 +127,13 @@ function SessionForm({ onSendSessionToBackend, onGetFiltersConfig }) {
 
   const onAddParticipant = () => {
     const canvasId = uuid();
+    const asymmetricFiltersId = uuid();
+
     dispatch(
       addParticipant({
         ...INITIAL_PARTICIPANT_DATA,
         canvas_id: canvasId,
+        asymmetric_filters_id: asymmetricFiltersId,
         position: { x: xAxis, y: yAxis, z: 0 }
       })
     );
@@ -290,6 +299,7 @@ function SessionForm({ onSendSessionToBackend, onGetFiltersConfig }) {
                         setSnackbarResponse={setSnackbarResponse}
                         handleCanvasPlacement={handleCanvasPlacement}
                         participantDimensions={participantDimensions}
+                        participantIdentifiers={participantIdentifiers}
                       />
                     );
                   })}

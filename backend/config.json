@@ -10,11 +10,12 @@
   "https": false,
   "ssl_cert": "./certificate/cert.crt",
   "ssl_key": "./certificate/key.key",
-  "ping_subprocesses": 0.0,
+  "ping_subprocesses": 0,
   "experimenter_multiprocessing": false,
   "participant_multiprocessing": true,
   "post_processing": {
     "port": 6000,
     "time_sleep": 1
-  }
+  },
+  "open_face_type": "subprocess"
 }

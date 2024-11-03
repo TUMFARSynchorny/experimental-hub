@@ -63,7 +63,8 @@ class ConnectionInterface(AsyncIOEventEmitter, metaclass=ABCMeta):
 
     @abstractmethod
     async def create_subscriber_proposal(
-        self, participant_summary: ParticipantSummaryDict | str | None
+        self, participant_summary: ParticipantSummaryDict | str | None,
+        subscriber=None
     ) -> ConnectionProposalDict:
         """Create a SubConnection proposal.
 

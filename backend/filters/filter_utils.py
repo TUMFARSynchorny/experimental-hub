@@ -52,7 +52,7 @@ def is_valid_filter_dict(data) -> TypeGuard[FilterDict]:
 
 
 def is_valid_set_filters_request(
-    data, recursive: bool = True
+        data, recursive: bool = True
 ) -> TypeGuard[SetFiltersRequestDict]:
     """Check if `data` is a valid custom_types.filters.SetFiltersRequest.
 
@@ -72,10 +72,10 @@ def is_valid_set_filters_request(
         True if `data` is a valid FilterDict.
     """
     if (
-        not util.check_valid_typeddict_keys(data, SetFiltersRequestDict)
-        or not isinstance(data["audio_filters"], list)
-        or not isinstance(data["video_filters"], list)
-        or not isinstance(data["participant_id"], str)
+            not util.check_valid_typeddict_keys(data, SetFiltersRequestDict)
+            or not isinstance(data["audio_filters"], list)
+            or not isinstance(data["video_filters"], list)
+            or not isinstance(data["participant_id"], str)
     ):
         return False
 
@@ -120,10 +120,10 @@ def is_valid_get_filters_data_dict(data) -> TypeGuard[GetFiltersDataRequestDict]
         True if `data` is a valid FilterDict.
     """
     if (
-        not util.check_valid_typeddict_keys(data, GetFiltersDataRequestDict)
-        or not isinstance(data["filter_id"], str)
-        or not isinstance(data["filter_name"], str)
-        or not isinstance(data["filter_channel"], str)
+            not util.check_valid_typeddict_keys(data, GetFiltersDataRequestDict)
+            or not isinstance(data["filter_id"], str)
+            or not isinstance(data["filter_name"], str)
+            or not isinstance(data["filter_channel"], str)
     ):
         return False
 
@@ -145,7 +145,7 @@ def is_valid_get_filters_data_dict(data) -> TypeGuard[GetFiltersDataRequestDict]
 
 
 def is_valid_get_filters_data_send_to_participant_dict(
-    data,
+        data,
 ) -> TypeGuard[GetFiltersDataSendToParticipantRequestDict]:
     """Check if `data` is a valid custom_types.filters.GetFiltersTestStatusRequestDict.
 
@@ -165,7 +165,7 @@ def is_valid_get_filters_data_send_to_participant_dict(
         True if `data` is a valid FilterDict.
     """
     if not util.check_valid_typeddict_keys(
-        data, GetFiltersDataSendToParticipantRequestDict
+            data, GetFiltersDataSendToParticipantRequestDict
     ) or not isinstance(data["participant_id"], str):
         return False
 
@@ -256,7 +256,7 @@ def get_filters_config() -> FilterConfigDict:
 
 
 def is_valid_filter_config(
-    filter: Filter, filter_json: FilterDict
+        filter: Filter, filter_json: FilterDict
 ) -> TypeGuard[FilterDict]:
     """Validate the init_config."""
     for config in filter_json["config"]:
@@ -274,7 +274,7 @@ def is_valid_filter_config(
                     + "It has to be type of string."
                 )
             if not isinstance(
-                filter_json["config"][config]["requiresOtherFilter"], bool
+                    filter_json["config"][config]["requiresOtherFilter"], bool
             ):
                 raise ValueError(
                     f"{filter} has an incorrect type in config > {config} > "
@@ -287,10 +287,10 @@ def is_valid_filter_config(
 
         elif isinstance(filter_json["config"][config]["defaultValue"], int):
             if not (
-                isinstance(filter_json["config"][config]["min"], int)
-                and isinstance(filter_json["config"][config]["max"], int)
-                and isinstance(filter_json["config"][config]["step"], (float, int))
-                and isinstance(filter_json["config"][config]["value"], int)
+                    isinstance(filter_json["config"][config]["min"], int)
+                    and isinstance(filter_json["config"][config]["max"], int)
+                    and isinstance(filter_json["config"][config]["step"], (float, int))
+                    and isinstance(filter_json["config"][config]["value"], int)
             ):
                 raise ValueError(
                     f"{filter} has an incorrect type in config > {config}. "
@@ -299,11 +299,11 @@ def is_valid_filter_config(
         else:
             return False
     return (
-        isinstance(filter_json["name"], str)
-        and isinstance(filter_json["id"], str)
-        and isinstance(filter_json["channel"], str)
-        and isinstance(filter_json["groupFilter"], bool)
-        and isinstance(filter_json["config"], dict)
+            isinstance(filter_json["name"], str)
+            and isinstance(filter_json["id"], str)
+            and isinstance(filter_json["channel"], str)
+            and isinstance(filter_json["groupFilter"], bool)
+            and isinstance(filter_json["config"], dict)
     )
 
 

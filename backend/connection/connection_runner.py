@@ -162,7 +162,7 @@ class ConnectionRunner:
             case "SEND":
                 await self._connection.send(data)
             case "CREATE_PROPOSAL":
-                proposal = await self._connection.create_subscriber_proposal(data)
+                proposal = await self._connection.create_subscriber_proposal(data["participant_summary"], data["subscriber"] if "subscriber" in data else None)
                 self._send_command("CONNECTION_PROPOSAL", proposal, command_nr)
             case "HANDLE_OFFER":
                 try:

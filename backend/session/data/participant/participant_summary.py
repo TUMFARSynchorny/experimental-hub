@@ -43,9 +43,12 @@ class ParticipantSummaryDict(TypedDict):
         https://github.com/TUMFARSynchorny/experimental-hub/wiki/Data-Types#participantsummary
     """
 
+    id: str
     participant_name: str
     position: PositionDict
     size: SizeDict
     chat: list[ChatMessageDict]
     view: list[CanvasElementDict]
     canvas_id: str
+    asymmetric_filters_id: str
+

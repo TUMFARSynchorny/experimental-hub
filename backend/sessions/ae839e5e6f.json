@@ -76,7 +76,9 @@
           }
         }
       ],
-      "canvas_id": "12345"
+      "canvas_id": "12345",
+      "asymmetric_filters_id": "12345",
+      "asymmetric_filters": []
     },
     {
       "id": "25a882669d",
@@ -136,7 +138,9 @@
           }
         }
       ],
-      "canvas_id": "67890"
+      "canvas_id": "67890",
+      "asymmetric_filters_id": "67890",
+      "asymmetric_filters": []
     }
   ],
   "log": []

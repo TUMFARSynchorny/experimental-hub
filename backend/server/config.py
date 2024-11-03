@@ -24,10 +24,12 @@ class Config:
     log_file: str | None
     log_dependencies: Literal["CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG"]
 
-    ping_subprocesses: float
+    ping_subprocesses: int
     experimenter_multiprocessing: bool
     participant_multiprocessing: bool
     post_processing: dict
+
+    open_face_type: str
 
     def __init__(self):
         """Load config from `backend/config.json`.
@@ -52,10 +54,11 @@ class Config:
             "https": bool,
             "log": str,
             "log_dependencies": str,
-            "ping_subprocesses": float,
+            "ping_subprocesses": int,
             "experimenter_multiprocessing": bool,
             "participant_multiprocessing": bool,
-            "post_processing": dict
+            "post_processing": dict,
+            "open_face_type": str
         }
         for key in data_types:
             if key not in config:
@@ -92,6 +95,10 @@ class Config:
         self.participant_multiprocessing = config["participant_multiprocessing"]
         self.post_processing = config["post_processing"]
 
+        # Parse open_face_type
+        self.open_face_type = config["open_face_type"]
+        if self.open_face_type is not None:
+            self.open_face_type = "subprocess"
         # Parse log_file
         self.log_file = config.get("log_file")
         if self.log_file is not None:
@@ -125,7 +132,8 @@ class Config:
             f"{self.ping_subprocesses}, experimenter_multiprocessing="
             f"{self.experimenter_multiprocessing}, participant_multiprocessing="
             f"{self.participant_multiprocessing}, post_processing="
-            f"{self.post_processing}."
+            f"{self.post_processing}, open_face_type="
+            f"{self.open_face_type}."
         )
 
     def __repr__(self) -> str:

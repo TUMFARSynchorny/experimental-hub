@@ -36,7 +36,7 @@ The backend can be configured using the `backend/config.json`.
 - `log` - str : Logging level for Hub. Must be one of: `CRITICAL`, `ERROR`, `WARNING`, `INFO`, `DEBUG`. Default: `INFO`
 - `log_file` - null | str : If given, the logger will write the log into the file instead of the console
 - `log_dependencies` - str : Logging level for project 3rd party dependencies (see [requirements.txt](./requirements.txt)). Must be one of: `CRITICAL`, `ERROR`, `WARNING`, `INFO`, `DEBUG`. Default: `WARNING`. Using `INFO` or `DEBUG` may lead to a strong increase in output.
-- `ping_subprocesses` - float : If greater than 0, all subprocesses will be pinged in an interval defined by the value of `ping_subprocesses` (in seconds). Used for debugging, default should be `0.0`.
+- `ping_subprocesses` - int : If greater than 0, all subprocesses will be pinged in an interval defined by the value of `ping_subprocesses` (in seconds). Used for debugging, default should be `0`.
 - `experimenter_multiprocessing` - bool : If true, experimenter connections will be executed on independent processes
 - `participant_multiprocessing` - bool : If true, participant connections will be executed on independent processes
 

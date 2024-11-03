@@ -9,7 +9,10 @@ function PageTemplate({
   return (
     <div className="h-full w-full flex flex-col">
       <div className="h-20 flex flex-row justify-between items-center w-full px-8">
-        <div className="font-bold text-3xl">{title}</div>
+        <div className="flex flex-row justify-start items-center gap-2">
+          <img src="/logo192.png" alt="syntharium-logo" width={50} />
+          <div className="font-bold text-3xl">{title}</div>
+        </div>
         {buttonListComponent && <div className={buttonClasses}>{buttonListComponent}</div>}{" "}
       </div>
       <hr className="w-full border-2 border-gray-200" />

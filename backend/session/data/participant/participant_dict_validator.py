@@ -3,6 +3,7 @@ from typing import TypeGuard
 from custom_types import util
 from custom_types.chat_message import is_valid_chatmessage
 from custom_types.canvas_element import is_valid_canvas_element
+from custom_types.asymmetric_filter import is_valid_asymmetric_filter
 from filters import filter_utils
 from group_filters import group_filter_utils
 from session.data.participant.participant_dict import ParticipantDict
@@ -42,6 +43,7 @@ def is_valid_participant(data, recursive: bool = True) -> TypeGuard[ParticipantD
         or not isinstance(data["position"], dict)
         or not isinstance(data["size"], dict)
         or not isinstance(data["view"], list)
+        or not isinstance(data["asymmetric_filters"], list)
     ):
         return False
 
@@ -64,6 +66,9 @@ def is_valid_participant(data, recursive: bool = True) -> TypeGuard[ParticipantD
         for canvas_element in data["view"]:
             if not is_valid_canvas_element(canvas_element):
                 return False
+        for asymmetric_filter in data["asymmetric_filters"]:
+            if not is_valid_asymmetric_filter(asymmetric_filter):
+                return False
         if not is_valid_size(data["size"]) or not is_valid_position(data["position"]):
             return False
 
@@ -78,4 +83,5 @@ def is_valid_participant(data, recursive: bool = True) -> TypeGuard[ParticipantD
         and isinstance(data["local_stream"], bool)
         and isinstance(data["banned"], bool)
         and isinstance(data["canvas_id"], str)
+        and isinstance(data["asymmetric_filters_id"], str)
     )

@@ -36,6 +36,13 @@ export type CanvasElement = {
   };
 };
 
+export type AsymmetricFilter = {
+  id: string;
+  participant_name: string;
+  video_filters: Filter[];
+  audio_filters: Filter[];
+};
+
 export type Participant = {
   id: string;
   participant_name: string;
@@ -53,6 +60,8 @@ export type Participant = {
   audio_group_filters: Filter[];
   video_group_filters: Filter[];
   chat_filters: ChatFilter[];
+  asymmetric_filters: AsymmetricFilter[];
+  asymmetric_filters_id: string;
   lastMessageSentTime: number;
   lastMessageReadTime: number;
 };
