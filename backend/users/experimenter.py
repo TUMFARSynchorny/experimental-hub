@@ -13,7 +13,7 @@ import os
 from typing import Any, Coroutine
 
 from filters import filter_utils, filter_factory
-from group_filters import group_filter_utils, group_filter_factory
+from group_filters import group_filter_utils
 from filters.filters_data_dict import FiltersDataDict
 from group_filters.group_filter_factory import create_group_filter
 from post_processing.filter_mapping import FILTER_CONFIG_MAPPING

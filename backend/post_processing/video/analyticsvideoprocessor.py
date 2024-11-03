@@ -92,7 +92,6 @@ class AnalyticsVideoProcessor(VideoProcessor):
         self.participant_data[participant_id].append(data)
 
     async def finalize_output(self):
-        """Finalize processing by generating CSV files."""
         tasks = []
         for participant_id, data in self.participant_data.items():
             output_csv = os.path.join(self.output_dir, f"{participant_id}_data.csv")
@@ -100,7 +99,7 @@ class AnalyticsVideoProcessor(VideoProcessor):
         await asyncio.gather(*tasks)
 
     def aggregate_group_filter_data(self):
-        current_index = {key: 0 for key in self.participant_data}  # Initialize starting indices for each participant
+        current_index = {key: 0 for key in self.participant_data}
         while True:
             chunk = {
                 key: values[current_index[key]:current_index[key] + oasis_min_required_data]
@@ -116,7 +115,7 @@ class AnalyticsVideoProcessor(VideoProcessor):
                 results = group_filter.aggregate(data_list)
 
                 output_csv_path = os.path.join(self.output_dir, f"{group_filter.name}_aggregated_results.csv")
-                with open(output_csv_path, 'a', newline='') as csvfile:  # Use 'a' to append results to the CSV
+                with open(output_csv_path, 'a', newline='') as csvfile:
                     csvwriter = csv.writer(csvfile)
 
                     if isinstance(results, Iterable) and not isinstance(results, (str, bytes)):
@@ -149,7 +148,6 @@ class AnalyticsVideoProcessor(VideoProcessor):
                 csvwriter.writerow(row)
 
     def extract_participant_id(self, filename: str) -> list[Any] | list[str]:
-        """Extract participant ID from filename using regex."""
         matches = re.findall(r"(\w+)_.*", filename)
         return matches if matches else ["unknown"]
 
