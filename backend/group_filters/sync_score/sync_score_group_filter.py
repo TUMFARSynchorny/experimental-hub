@@ -1,5 +1,6 @@
-from typing import Any
+from typing import Any, Optional, Union
 import numpy as np
+import pandas as pd
 from av import VideoFrame, AudioFrame
 from filters.filter_dict import FilterDict
 from group_filters import GroupFilter
@@ -9,7 +10,6 @@ from filters.open_face_au.open_face_au_extractor import OpenFaceAUExtractor
 from group_filters.sync_score.bow import BoW
 from group_filters.sync_score.oasis import oasis
 
-
 bow_window_size = 8  # how many frames each window contains
 bow_word_size = 4  # how many symbols each window is mapped to (window_length / word_length is a prositive integer)
 bow_n_bins = (
@@ -18,7 +18,7 @@ bow_n_bins = (
 bow_strategy = "uniform"  # the strategy used by the Bag-of-Words (BoW) algorithm
 oasis_energy_threshold = 0.1  # min signal energy required for the OASIS algorithm
 oasis_min_required_data = (
-    2 * bow_window_size - 1
+        2 * bow_window_size - 1
 )  # min signal length required for the OASIS algorithm
 
 # Warm up the BoW
@@ -42,7 +42,6 @@ class SyncScoreGroupFilter(GroupFilter):
 
         self.au_extractor = OpenFaceAUExtractor()
         self.au_data = {}
-
     @staticmethod
     def name() -> str:
         return "SYNC_SCORE_GF"
@@ -56,25 +55,46 @@ class SyncScoreGroupFilter(GroupFilter):
         return "video"
 
     async def process_individual_frame(
-        self, original: VideoFrame | AudioFrame, ndarray: np.ndarray
+            self, original: Optional[Union[VideoFrame, AudioFrame]], ndarray: np.ndarray
     ) -> Any:
         # Extract AU from the frame
         exit_code, _, result = self.au_extractor.extract(ndarray, self.au_data.get("roi", None))
-
         if exit_code != 0:
             return None
 
         self.au_data = result
 
-        # Parse AU data
-        au06_c = result.get("presence", {}).get("AU06", "-")
-        au12_r = result.get("intensity", {}).get("AU12", "-")
+        # Parse AU data and compute smile
+        return await self._parse_au_data()
+
+    async def extract_post_process(self, extraction_path: str) -> Any:
+        df = pd.read_csv(extraction_path)
+        self.au_data['AU06_c'] = df['AU06_c'].tolist()
+        self.au_data['AU12_r'] = df['AU12_r'].tolist()
+
+        min_length = min(len(self.au_data['AU06_c']), len(self.au_data['AU12_r']))
+
+        smile_values = []
+
+        for frame_index in range(min_length):
+            self.au_data['presence'] = {"AU06": self.au_data['AU06_c'][frame_index]}
+            self.au_data['intensity'] = {"AU12": self.au_data['AU12_r'][frame_index]}
+
+            smile_value = await self._parse_au_data()
+            if smile_value is not None:
+                smile_values.append(smile_value)
+
+        return smile_values
+
+    async def _parse_au_data(self) -> Optional[float]:
+        au06_c = self.au_data.get("presence", {}).get("AU06", "-")
+        au12_r = self.au_data.get("intensity", {}).get("AU12", "-")
 
         if au06_c == "-" or au12_r == "-":
             return None
 
+        # Compute smile value
         smile = au12_r if au06_c == 1 else 0
-
         return smile
 
     @staticmethod

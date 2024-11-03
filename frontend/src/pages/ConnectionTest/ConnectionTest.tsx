@@ -684,6 +684,41 @@ function SetFilterPresets(props: { connection: Connection }): JSX.Element {
               audio_filters: [],
               video_filters: [
                 {
+                  name: "PING",
+                  id: "ping-v",
+                  channel: "both",
+                  groupFilter: false,
+                  config: {
+                    period: {
+                      min: 10,
+                      max: 60000,
+                      step: 1,
+                      value: 1000,
+                      defaultValue: 1000
+                    },
+                    bufferLength: {
+                      min: 1,
+                      max: 300,
+                      step: 1,
+                      value: 10,
+                      defaultValue: 10
+                    }
+                  }
+                }
+              ]
+            })
+          }
+          disabled={props.connection.state !== ConnectionState.CONNECTED}
+        >
+          PING
+        </button>
+        <button
+          onClick={() =>
+            props.connection.sendMessage("SET_FILTERS", {
+              participant_id: "all",
+              audio_filters: [],
+              video_filters: [
+                {
                   name: "DELAY",
                   id: "delay-v",
                   channel: "both",

@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Literal, TYPE_CHECKING
+from typing import Literal, TYPE_CHECKING, Optional
 
 from filters.filter_utils import get_filter_dict
 
@@ -13,8 +13,8 @@ from hub.exceptions import ErrorDictException
 
 def create_filter(
     filter_config: FilterDict,
-    audio_track_handler: TrackHandler,
-    video_track_handler: TrackHandler,
+    audio_track_handler: Optional[TrackHandler] = None,
+    video_track_handler: Optional[TrackHandler] = None,
 ) -> Filter:
     """Create a filter based on `type` of `filter_config`.
 
@@ -44,7 +44,6 @@ def create_filter(
         )
 
     return filters[filter_name](filter_config, audio_track_handler, video_track_handler)
-
 
 def init_mute_filter(
     kind: Literal["audio", "video"],

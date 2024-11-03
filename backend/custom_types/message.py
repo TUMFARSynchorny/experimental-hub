@@ -86,7 +86,9 @@ MESSAGE_TYPES = Literal[
     "POST_PROCESSING_VIDEO",
     "GET_RECORDING_LIST",
     "CHECK_POST_PROCESSING",
-    "ADD_ICE_CANDIDATE"
+    "ADD_ICE_CANDIDATE",
+    "GET_VIDEO_LIST",
+    "APPLY_FILTER_TO_VIDEO"
 ]
 """Possible message types for custom_types.message.MessageDict.
 

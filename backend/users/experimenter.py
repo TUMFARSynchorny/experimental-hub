@@ -12,9 +12,14 @@ import logging
 import os
 from typing import Any, Coroutine
 
-from filters import filter_utils
+from filters import filter_utils, filter_factory
 from group_filters import group_filter_utils
 from filters.filters_data_dict import FiltersDataDict
+from group_filters.group_filter_factory import create_group_filter
+from post_processing.filter_mapping import FILTER_CONFIG_MAPPING
+from post_processing.video.analyticsvideoprocessor import AnalyticsVideoProcessor
+from post_processing.video.manipulationvideoprocessor import ManipulationVideoProcessor
+from post_processing.video.video_post_processor import VideoPostProcessor
 from session.data.session import is_valid_session
 from custom_types.chat_message import is_valid_chatmessage
 from custom_types.kick import is_valid_kickrequest
@@ -87,6 +92,8 @@ class Experimenter(User):
         self.on_message("SET_FILTERS", self._handle_set_filters)
         self.on_message("POST_PROCESSING_VIDEO", self._handle_post_processing_video)
         self.on_message("GET_RECORDING_LIST", self._handle_get_recording_list)
+        self.on_message("GET_VIDEO_LIST", self._handle_get_video_list)
+        self.on_message("APPLY_FILTER_TO_VIDEO", self._handle_apply_filter_video)
         self.on_message("CHECK_POST_PROCESSING", self._handle_check_post_processing)
         self.on_message("SET_GROUP_FILTERS", self._handle_set_group_filters)
         self.on_message("GET_FILTERS_DATA", self._handle_get_filters_data)
@@ -455,6 +462,7 @@ class Experimenter(User):
         experiment = self.get_experiment_or_raise("Cannot start experiment.")
         await experiment.start()
 
+
         success = SuccessDict(
             type="START_EXPERIMENT", description="Successfully started experiment."
         )
@@ -767,7 +775,7 @@ class Experimenter(User):
             type="SET_FILTERS", description="Successfully changed filters."
         )
         return MessageDict(type="SUCCESS", data=success)
-    
+
 
     async def _handle_post_processing_video(self, data: Any) -> MessageDict:
         """Handle requests with type `POST_PROCESSING_VIDEO`.
@@ -800,7 +808,7 @@ class Experimenter(User):
                 type="INVALID_DATATYPE",
                 description="Message data is not a valid PostProcessingDict.",
             )
-        
+
         video_post_processing = VideoPostProcessing()
         status = video_post_processing.check_existing_process()
 
@@ -810,12 +818,12 @@ class Experimenter(User):
                 type="STILL_PROCESSING",
                 description="There is a running FeatureExtraction subprocess. Please wait until it is complete."
             )
-        
+
         session_id = data["session_id"]
-        out_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "sessions", 
+        out_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "sessions",
                                     session_id,
                                     "processed")
-        
+
         if os.path.exists(out_dir):
             raise ErrorDictException(
                 code=409,
@@ -841,19 +849,18 @@ class Experimenter(User):
                 video_list.append(PostProcessingData("video", filename, session_id, participant_id))
             else:
                 continue
-        
+
         if (len(video_list) == 0):
             raise ErrorDictException(
                 code=404,
                 type="FILE_NOT_FOUND",
                 description=f'No video recordings available for session {session_id}.'
             )
-        
+
         video_post_processing.recording_list = video_list
         video_post_processing.execute()
 
         return MessageDict(type="POST_PROCESSING_VIDEO", data=f"Start video post-processing. Result directory: {out_dir}")
-    
 
     async def _handle_get_recording_list(self, _) -> MessageDict:
         """Handle requests with type `GET_RECORDING_LIST`.
@@ -872,7 +879,7 @@ class Experimenter(User):
             MessageDict with type: `RECORDING_LIST`.
         """
         recording_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "sessions")
-        recordings = [ item for item in os.listdir(recording_path) 
+        recordings = [ item for item in os.listdir(recording_path)
                       if os.path.isdir(os.path.join(recording_path, item)) ]
         result = []
         for session_id in recordings:
@@ -905,7 +912,7 @@ class Experimenter(User):
                 curr_participant_id = filename.split("_")[0]
                 if (i == 0):
                     prev_participant_id = curr_participant_id
-                
+
                 if prev_participant_id != curr_participant_id:
                     participants.append({
                         "participant_id": prev_participant_id,
@@ -915,8 +922,8 @@ class Experimenter(User):
                     prev_participant_id = curr_participant_id
                     videos = []
                     audios = []
-                
-            
+
+
             if len(videos) > 0 or len(audios) > 0:
                 participants.append({
                     "participant_id": prev_participant_id,
@@ -932,9 +939,46 @@ class Experimenter(User):
                 "session_description": session_data.get("description"),
                 "participants": participants
             })
-                    
+
         return MessageDict(type="RECORDING_LIST", data=result)
-    
+
+    async def _handle_get_video_list(self, message: MessageDict) -> MessageDict:
+        """Handle requests with type `GET_VIDEO_LIST`.
+
+        Fetches all video files from a specified session directory.
+
+        Parameters
+        ----------
+        message : MessageDict
+            Contains session_id to fetch videos.
+
+        Returns
+        -------
+        MessageDict
+            MessageDict with type: `VIDEO_LIST` and data containing video files.
+        """
+        self._logger.debug("Handling GET_VIDEO_LIST message")
+
+        session_id = message.get("session_id")
+        if not session_id:
+            self._logger.error("Session ID missing from message")
+            return MessageDict(type="ERROR", data={"message": "Session ID is required."})
+
+        sessions_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "sessions")
+        session_path = os.path.join(sessions_path, session_id)
+        self._logger.debug(f"Constructed session path: {session_path}")
+
+        try:
+            video_files = [file for file in os.listdir(session_path) if file.endswith('.mp4')]
+            self._logger.info(f"Found {len(video_files)} video files in session: {session_id}")
+            return MessageDict(type="VIDEO_LIST", data={"videos": video_files})
+        except FileNotFoundError:
+            self._logger.error(f"Session directory does not exist: {session_path}")
+            return MessageDict(type="ERROR", data={"message": "Session directory does not exist."})
+        except Exception as e:
+            self._logger.exception(f"An error occurred while trying to list video files in session: {session_id}")
+            return MessageDict(type="ERROR", data={"message": str(e)})
+
     async def _handle_check_post_processing(self, _) -> MessageDict:
         """Handle requests with type `CHECK_POST_PROCESSING`.
 
@@ -958,7 +1002,7 @@ class Experimenter(User):
             "description": status["message"],
             "is_processing": status["is_processing"]
         }
-        
+
         if not result["is_processing"] and result["description"] != "":
             success = SuccessDict(
                 type="POST_PROCESSING_VIDEO", description=result["description"]
@@ -1202,3 +1246,108 @@ class Experimenter(User):
         await experiment.set_message_read_time(
             data["participant_id"], data["lastMessageReadTime"]
         )
+
+    async def _handle_apply_filter_video(self, data: Any) -> MessageDict:
+        """Handle requests with type `APPLY_FILTER_VIDEO`.
+
+        Parameters
+        ----------
+        data : Any
+            Expected to contain 'session_id', and 'videos', which is a list of dictionaries with 'video_filename' and 'filter_configs'.
+
+        Returns
+        -------
+        MessageDict
+            Returns a success message upon completion or raises an error if issues are found.
+
+        Raises
+        ------
+        ErrorDictException
+            Raised for various errors including invalid data or processing errors.
+        """
+        self._logger.info(data)
+
+        if "session_id" not in data or "videoFilterRequests" not in data:
+            raise ErrorDictException(
+                code=400,
+                type="INVALID_REQUEST",
+                description="Missing required fields: session_id or videos."
+            )
+
+        session_id = data["session_id"]
+        video_requests = data["videoFilterRequests"]
+
+        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        sessions_path = os.path.join(base_dir, "sessions")
+        output_dir = os.path.join(sessions_path, session_id, "processed")
+        os.makedirs(output_dir, exist_ok=True)
+
+        results = []
+        video_post_processor = VideoPostProcessor([])
+
+        for request in video_requests:
+            video_filenames = request.get("video_filenames")
+            filter_configs = request.get("filter_configs")
+
+            if not video_filenames or not filter_configs:
+                raise ErrorDictException(
+                    code=400,
+                    type="INVALID_REQUEST",
+                    description="Each video request must contain 'video_filenames' and 'filter_configs'."
+                )
+
+            processor_type, external_process = self._get_processor_type(filter_configs)
+            video_processor = self._create_video_processor(processor_type, filter_configs, session_id, video_filenames,
+                                                           sessions_path, output_dir, external_process)
+
+            video_post_processor.video_processors.append(video_processor)
+
+        await video_post_processor.execute()
+
+        for filename in video_filenames:
+            results.append({
+                 "video_filename": filename,
+                 "output_path": os.path.join(output_dir,
+                                            filename) if processor_type == "manipulation" else os.path.join(
+                 output_dir, f"{filename}.csv"),
+                 "status": "success"
+                })
+
+        # Return a summary of the processing
+        return MessageDict(
+            type="SUCCESS",
+            data={"results": results}
+        )
+
+    def _get_processor_type(self, filter_configs):
+        """Determine the processor type (manipulative or analysis) based on the filter configs."""
+        processor_types = set(FILTER_CONFIG_MAPPING[cfg.get("name")]["type"] for cfg in filter_configs)
+        if len(processor_types) != 1:
+            raise ErrorDictException(
+                code=400,
+                type="INVALID_FILTER",
+                description="All filters must be of the same processor type."
+            )
+
+        external_process = any(FILTER_CONFIG_MAPPING[cfg.get("name")]["externalProcess"] for cfg in filter_configs)
+
+        return processor_types.pop(), external_process
+
+    def _create_video_processor(self, processor_type, filter_configs, session_id, video_filenames, sessions_path,
+                                output_dir, external_process):
+        """Create a VideoProcessor based on the processor type."""
+        filters = [filter_factory.create_filter(cfg) for cfg in filter_configs if not cfg.get('groupFilter')]
+        group_filters = [create_group_filter(cfg, session_id) for cfg in filter_configs if cfg.get('groupFilter')]
+
+        if processor_type == "manipulation":
+            return ManipulationVideoProcessor(session_id, video_filenames, sessions_path, output_dir, filters,
+                                              group_filters, external_process)
+        elif processor_type == "analysis":
+            return AnalyticsVideoProcessor(session_id, video_filenames, sessions_path, output_dir, filters,
+                                           group_filters, external_process)
+        else:
+            raise ErrorDictException(
+                code=400,
+                type="INVALID_FILTER",
+                description=f"Unknown processor type: {processor_type}"
+            )

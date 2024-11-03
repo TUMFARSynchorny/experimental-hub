@@ -46,6 +46,7 @@ import { faClipboardCheck, faUsers, faClipboardList } from "@fortawesome/free-so
 import OpenAI from "openai";
 import { ErrorBoundary } from "react-error-boundary";
 import LoadingScreen from "./components/organisms/LoadingScreen/LoadingScreen";
+import { CircularProgress } from "@mui/material";
 
 function App() {
   const [localStream, setLocalStream] = useState(null);
@@ -315,10 +316,20 @@ function App() {
     dispatch(saveSession(data));
   };
 
+  const onProcessingComplete = () => {
+    setPostProcessingStatus(null);
+    setSnackbar({
+      open: true,
+      text: "Post-processing complete.",
+      severity: "info"
+    });
+  };
+
   const handleSuccess = (data) => {
     if (data.type == "POST_PROCESSING_VIDEO") {
       setPostProcessingSuccess(data.description);
       setPostProcessingError(null);
+      onProcessingComplete();
     } else {
       setSnackbar({
         open: true,
@@ -332,6 +343,7 @@ function App() {
     if (data.type == "POST_PROCESSING_FAILED") {
       setPostProcessingError(data.description);
       setPostProcessingSuccess(null);
+      onProcessingComplete();
     } else {
       setSnackbar({ open: true, text: `${data.description}`, severity: "error" });
     }
@@ -414,6 +426,7 @@ function App() {
 
   const handleFiltersConfig = (data) => {
     dispatch(initializeFiltersData(data));
+    console.log("Received filter config data:", data);
   };
 
   const handleFiltersData = (data) => {
@@ -508,6 +521,35 @@ function App() {
     connection.sendMessage("CHECK_POST_PROCESSING", {});
   };
 
+  const onApplyFiltersToVideos = (sessionId, filterRequests) => {
+    const formattedFilterRequests = filterRequests
+      .map(({ filter, videos }) => {
+        if (filter.groupFilter) {
+          return {
+            video_filenames: videos,
+            filter_configs: [filter]
+          };
+        } else {
+          // Handle individual filters
+          return videos.map((video) => ({
+            video_filenames: video,
+            filter_configs: [filter]
+          }));
+        }
+      })
+      .flat();
+
+    console.log("Sending request:", {
+      session_id: sessionId,
+      videos: formattedFilterRequests
+    });
+
+    connection.sendMessage("APPLY_FILTER_TO_VIDEO", {
+      session_id: sessionId,
+      videoFilterRequests: formattedFilterRequests
+    });
+  };
+
   const onUpdateMessageReadTime = (participantId, lastMessageReadTime) => {
     connection.sendMessage("UPDATE_READ_MESSAGE_TIME", {
       participant_id: participantId,
@@ -520,7 +562,11 @@ function App() {
   };
 
   const onGetFiltersConfig = () => {
-    connection.sendMessage("GET_FILTERS_CONFIG", {});
+    if (connection && connection.sendMessage) {
+      connection.sendMessage("GET_FILTERS_CONFIG", {});
+    } else {
+      console.error("Connection not exists");
+    }
   };
 
   return (
@@ -569,17 +615,27 @@ function App() {
               <PageTemplate
                 title={"Post-Processing Room"}
                 customComponent={
-                  <PostProcessing
-                    status={status}
-                    recordings={recordings}
-                    connection={connection}
-                    connectionState={connectionState}
-                    errorMessage={errorPostProc}
-                    successMessage={successPostProc}
-                    onPostProcessingVideo={onPostProcessingVideo}
-                    onCheckPostProcessing={onCheckPostProcessing}
-                    onGetRecordingList={onGetRecordingList}
-                  />
+                  connectionState === ConnectionState.CONNECTED ? (
+                    <PostProcessing
+                      status={status}
+                      recordings={recordings}
+                      connection={connection}
+                      connectionState={connectionState}
+                      errorMessage={errorPostProc}
+                      successMessage={successPostProc}
+                      onPostProcessingVideo={onPostProcessingVideo}
+                      onCheckPostProcessing={onCheckPostProcessing}
+                      onGetRecordingList={onGetRecordingList}
+                      onApplyFiltersToVideos={onApplyFiltersToVideos}
+                      onGetFiltersConfig={onGetFiltersConfig}
+                      onProcessingComplete={onProcessingComplete}
+                    />
+                  ) : (
+                    <div className="flex flex-col items-center mt-10">
+                      <CircularProgress />
+                      <h1>Loading...</h1>
+                    </div>
+                  )
                 }
                 centerContentOnYAxis={true}
                 buttonListComponent={

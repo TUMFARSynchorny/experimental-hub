@@ -1,4 +1,5 @@
 """Provide `RotationFilter` filter."""
+from typing import Optional
 
 import cv2
 import numpy
@@ -14,7 +15,8 @@ class RotationFilter(Filter):
     rotation: int
 
     def __init__(
-        self, config: FilterDict, audio_track_handler, video_track_handler
+            self, config: FilterDict, audio_track_handler: Optional[any] = None,
+            video_track_handler: Optional[any] = None, participant_id = None
     ) -> None:
         super().__init__(config, audio_track_handler, video_track_handler)
         direction = 1
@@ -52,16 +54,26 @@ class RotationFilter(Filter):
             },
         }
 
-    async def process(
-        self, original: VideoFrame, ndarray: numpy.ndarray
-    ) -> numpy.ndarray:
-        # For docstring see filters.filter.Filter or hover over function declaration
-        # Example based on https://github.com/aiortc/aiortc/tree/main/examples/server
+    async def process(self, original: Optional[VideoFrame] = None, ndarray: numpy.ndarray = None,
+                      **kwargs) -> numpy.ndarray:
+        """Unified rotation processing method that can use either video time or frame index to determine the angle.
+
+        Args:
+            original (VideoFrame, optional): The original video frame.
+            ndarray (numpy.ndarray): The ndarray representing the video frame to be rotated.
+            **kwargs: Arbitrary keyword arguments. Can include 'frame_index'.
+
+        Returns:
+            numpy.ndarray: The rotated frame as a numpy array.
+        """
+        if original:
+            angle = original.time * self.rotation
+        elif 'frame_index' in kwargs:
+            frame_index = kwargs.get('frame_index', 0)
+            angle = frame_index * 1
+        else:
+            raise ValueError("No valid time or frame index provided for rotation calculation.")
+
         rows, cols, _ = ndarray.shape
-
-        M = cv2.getRotationMatrix2D(
-            (cols / 2, rows / 2), original.time * self.rotation, 1
-        )
-        ndarray = cv2.warpAffine(ndarray, M, (cols, rows))
-
-        return ndarray
+        M = cv2.getRotationMatrix2D((cols / 2, rows / 2), angle % 360, 1)
+        return cv2.warpAffine(ndarray, M, (cols, rows))

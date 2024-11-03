@@ -25,6 +25,7 @@ class PostVideoProducer():
         self._config = config
         try:
             self._sock.bind(f"tcp://{self._config.host}:{self._config.post_processing['port']}")
+            self._logger.info(f"Bound to port: {self._config.post_processing['port']}")
             # Give zmq some time to bind with consumer
             time.sleep(self._config.post_processing['time_sleep'])
         except zmq.ZMQError as e:

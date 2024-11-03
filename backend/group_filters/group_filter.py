@@ -278,3 +278,11 @@ class GroupFilter(ABC):
             f"{__name__} is missing it's implementation of the static"
             " abstract `aggregate` method."
         )
+
+    @staticmethod
+    @abstractmethod
+    def extract_post_process(self, extraction_path: str) -> Any:
+        raise NotImplementedError(
+            f"{self} is missing it's implementation of the abstract"
+            " `process_individual_frame` method."
+        )

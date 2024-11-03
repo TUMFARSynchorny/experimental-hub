@@ -33,3 +33,14 @@ class OpenFaceDataParser:
 
     def write(self, frame: int, openface_data):
         self.writer.writerow((f"frame {frame}", openface_data))
+
+    def write_ping(self, frame: int, ping: int):
+        """Write ping data to the CSV."""
+        self.writer.writerow((frame, ping))
+        self.save_file.flush()
+
+    def write_gf(self, c, time_value, runtime, non_aligned, data, result):
+        """Write the relevant values to the CSV."""
+        # Write the provided values as a row in the CSV
+        self.writer.writerow((c, time_value, runtime, non_aligned, data, result))
+        self.save_file.flush()

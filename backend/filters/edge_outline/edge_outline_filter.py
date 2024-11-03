@@ -1,4 +1,5 @@
 """Provide `EdgeOutlineFilter` filter."""
+from typing import Optional
 
 import cv2
 import numpy
@@ -28,7 +29,7 @@ class EdgeOutlineFilter(Filter):
     def channel() -> str:
         return "video"
 
-    async def process(self, _: VideoFrame, ndarray: numpy.ndarray) -> numpy.ndarray:
+    async def process(self, _: Optional[VideoFrame]=None, ndarray: numpy.ndarray=None,  **kwargs) -> numpy.ndarray:
         # For docstring see filters.filter.Filter or hover over function declaration
         # Example based on https://github.com/aiortc/aiortc/tree/main/examples/server
         ndarray = cv2.cvtColor(cv2.Canny(ndarray, 100, 200), cv2.COLOR_GRAY2BGR)

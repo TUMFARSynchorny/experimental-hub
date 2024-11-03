@@ -157,7 +157,7 @@ class GroupFilterAggregator(object):
                                 continue
 
                             # Aggregate data
-                            aggregation_result = self._group_filter.aggregate(data)
+                            aggregation_result = self._group_filter.aggregate(data=data)
 
                             # Update aggregation history
                             aggregation_history[c] = c_data
@@ -175,7 +175,6 @@ class GroupFilterAggregator(object):
                                 + f"\n\tData: {data}"
                                 + f"\n\tResult: {aggregation_result}"
                             )
-
                         # Send the aggregation result to each participant
                         if self.is_result_socket_connected and aggregation_result_dict:
                             for pid in self._data:
