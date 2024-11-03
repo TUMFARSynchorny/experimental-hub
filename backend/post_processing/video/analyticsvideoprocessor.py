@@ -1,11 +1,9 @@
 import asyncio
 import csv
 import os
-from typing import *
 import re
-from typing import List, Any
+from typing import List, Any, Iterable
 
-import cv2
 import numpy as np
 
 from group_filters.sync_score.sync_score_group_filter import oasis_min_required_data
@@ -160,7 +158,6 @@ class AnalyticsVideoProcessor(VideoProcessor):
         self.participant_data[participant_id] = extracted_data
 
     def prepare_recording_list(self) -> List["PostProcessingData"]:
-        """Prepares the recording list for external processing."""
         recording_list = []
         for filename in self.video_filenames:
             participant_id = self.extract_participant_id(filename)

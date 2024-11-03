@@ -1,9 +1,8 @@
-from typing import Any, Optional, Union, List, Dict
+from typing import Any, Optional, Union
 import numpy as np
 import pandas as pd
 from av import VideoFrame, AudioFrame
 from filters.filter_dict import FilterDict
-from filters.open_face_au.open_face_data_parser import OpenFaceDataParser
 from group_filters import GroupFilter
 from scipy.interpolate import interp1d
 

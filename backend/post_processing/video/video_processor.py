@@ -1,8 +1,7 @@
 import asyncio
 import os
 from abc import ABC, abstractmethod
-from typing import Optional, Union, Dict, List
-from post_processing.video.post_processing import VideoPostProcessing
+from typing import Optional, Union, List
 import logging
 
 import cv2
