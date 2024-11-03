@@ -59,7 +59,6 @@ class Filter(ABC):
         config: FilterDict,
         audio_track_handler: Optional[TrackHandler] = None,
         video_track_handler: Optional[TrackHandler] = None,
-        participant_id: Optional[str] = None
     ) -> None:
         """Initialize new Filter.
 
@@ -85,8 +84,6 @@ class Filter(ABC):
         self.audio_track_handler = audio_track_handler
         self.video_track_handler = video_track_handler
         self._id = self._config["id"]
-        self.participant_id = participant_id  # New: Store the participant_id
-
     @property
     def config(self) -> FilterDict:
         """Get Filter config."""

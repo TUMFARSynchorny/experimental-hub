@@ -258,7 +258,7 @@ class TrackHandler(MediaStreamTrack):
 
             # Create a new filter for configs with empty id.
             self._filters[filter_id] = filter_factory.create_filter(
-                config, self.connection.incoming_audio, self.connection.incoming_video, self.connection._log_name_suffix[2:]
+                config, self.connection.incoming_audio, self.connection.incoming_video
             )
 
         coroutines: list[Coroutine] = []

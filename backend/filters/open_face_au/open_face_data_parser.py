@@ -4,7 +4,7 @@ from typing import Any
 
 
 class OpenFaceDataParser:
-    def __init__(self, participant_id: str):
+    def __init__(self):
         # TODO: get session and participant id
         path = os.path.join(
             os.path.dirname(
@@ -14,7 +14,7 @@ class OpenFaceDataParser:
             "ae839e5e6f",
             "OpenFace",
         )
-        filename = participant_id
+        filename = "9ba5fdccde"
         appendix = ".csv"
 
         if not os.path.exists(path):
@@ -28,18 +28,12 @@ class OpenFaceDataParser:
 
         self.save_file = open(filepath, "w")
         self.writer = csv.writer(self.save_file, delimiter=",")
-        if participant_id == "aggregate":
-            self.writer.writerow(
-                ("Combination", "Time", "Runtime", "Non Aligned", "Aligned Data", "Aggregation Result"))
-        else:
-            self.writer.writerow(("TimeStap", "frame", "au06", "au12", "fps"))
-        self.save_file.flush()
 
     def __del__(self):
         self.save_file.close()
 
-    def write(self, timestapx, frame, au06, au12, fps):
-        self.writer.writerow((timestapx, frame, au06, au12, fps))
+    def write(self, frame: int, openface_data):
+        self.writer.writerow((f"frame {frame}", openface_data))
 
     def write_ping(self, frame: int, ping: int):
         """Write ping data to the CSV."""

@@ -5,7 +5,6 @@ from filters.filter import Filter
 from filter_api import FilterAPIInterface
 from filters.filter_data_dict import FilterDataDict
 from filters.filter_dict import FilterDict
-from filters.open_face_au.open_face_data_parser import OpenFaceDataParser
 
 
 class PingFilter(Filter):
@@ -19,7 +18,7 @@ class PingFilter(Filter):
     buffer_length: int
 
     def __init__(
-        self, config: FilterDict, audio_track_handler, video_track_handler, participant_id
+        self, config: FilterDict, audio_track_handler, video_track_handler
     ) -> None:
         super().__init__(config, audio_track_handler, video_track_handler)
 
@@ -28,7 +27,6 @@ class PingFilter(Filter):
         self.ping = 0
         self.period = config["config"]["period"]["value"]
         self.buffer_length = config["config"]["bufferLength"]["value"]
-        self.ping_writer = OpenFaceDataParser(participant_id + "_ping")  # Differentiate ping data file
 
     async def complete_setup(self) -> None:
         await self.filter_api.start_pinging(self.period, self.buffer_length)
@@ -77,8 +75,6 @@ class PingFilter(Filter):
         # Fetch current PING
         if not self.counter % 30:
             self.ping = await self.filter_api.get_current_ping()
-            self.ping_writer.write_ping(self.counter, self.ping)  # Write the current ping to the CSV
-
 
         # Uncomment to display PING on the video frame
         # height, _, _ = ndarray.shape

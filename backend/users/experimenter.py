@@ -1336,7 +1336,7 @@ class Experimenter(User):
     def _create_video_processor(self, processor_type, filter_configs, session_id, video_filenames, sessions_path,
                                 output_dir, external_process):
         """Create a VideoProcessor based on the processor type."""
-        filters = [filter_factory.create_filter(cfg,participant_id="t") for cfg in filter_configs if not cfg.get('groupFilter')]
+        filters = [filter_factory.create_filter(cfg) for cfg in filter_configs if not cfg.get('groupFilter')]
         group_filters = [create_group_filter(cfg, session_id) for cfg in filter_configs if cfg.get('groupFilter')]
 
         if processor_type == "manipulation":
