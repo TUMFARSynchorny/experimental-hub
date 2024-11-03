@@ -294,10 +294,20 @@ function App() {
     dispatch(saveSession(data));
   };
 
+  const onProcessingComplete = () => {
+    setPostProcessingStatus(null);
+    setSnackbar({
+      open: true,
+      text: "Post-processing complete.",
+      severity: "info"
+    });
+  };
+
   const handleSuccess = (data) => {
     if (data.type == "POST_PROCESSING_VIDEO") {
       setPostProcessingSuccess(data.description);
       setPostProcessingError(null);
+      onProcessingComplete();
     } else {
       setSnackbar({
         open: true,
@@ -311,6 +321,7 @@ function App() {
     if (data.type == "POST_PROCESSING_FAILED") {
       setPostProcessingError(data.description);
       setPostProcessingSuccess(null);
+      onProcessingComplete();
     } else {
       setSnackbar({ open: true, text: `${data.description}`, severity: "error" });
     }
@@ -586,6 +597,7 @@ function App() {
                       onGetRecordingList={onGetRecordingList}
                       onApplyFiltersToVideos={onApplyFiltersToVideos}
                       onGetFiltersConfig={onGetFiltersConfig}
+                      onProcessingComplete={onProcessingComplete}
                     />
                   ) : (
                     <div className="flex flex-col items-center mt-10">

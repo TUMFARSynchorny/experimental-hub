@@ -16,6 +16,7 @@ import Tooltip from "@mui/material/Tooltip";
 import { useAppSelector } from "../../redux/hooks";
 import { selectFiltersDataSession } from "../../redux/slices/openSessionSlice";
 import ListSubheader from "@mui/material/ListSubheader";
+import CircularProgress from "@mui/material/CircularProgress";
 
 function PostProcessing({
   status,
@@ -28,7 +29,8 @@ function PostProcessing({
   onCheckPostProcessing,
   onGetRecordingList,
   onGetFiltersConfig,
-  onApplyFiltersToVideos
+  onApplyFiltersToVideos,
+  onProcessingComplete
 }) {
   const [selectedSession, setSelectedSession] = useState("");
   const [selectedVideos, setSelectedVideos] = useState([]);
@@ -94,6 +96,12 @@ function PostProcessing({
       }
     };
   }, [connection, selectedSession]); // Ensure useEffect re-runs if connection or selectedSession changes
+
+  useEffect(() => {
+    if (onProcessingComplete) {
+      setIsProcessing(false);
+    }
+  }, [onProcessingComplete]);
 
   const handleSelectSession = (session_id) => {
     setSelectedSession(session_id);
@@ -181,9 +189,9 @@ function PostProcessing({
       });
     });
 
-    onApplyFiltersToVideos(selectedSession, filterRequests);
+    setIsProcessing(true);
 
-    onCheckPostProcessing();
+    onApplyFiltersToVideos(selectedSession, filterRequests);
   };
 
   const addFilterSelection = () => {
@@ -218,8 +226,17 @@ function PostProcessing({
         </Grid>
       </Grid>
 
-      {!isProcessing && (
+      {isProcessing ? (
+        // Show processing icon when isProcessing is true
+        <Box className="mt-4" display="flex" flexDirection="column" alignItems="center">
+          <Typography variant="h6">Processing...</Typography>
+          <CircularProgress />
+        </Box>
+      ) : (
+        // Render the existing UI when not processing
         <Box className="mt-4">
+          {/* ... [Your existing UI components] ... */}
+
           {/* Selected Videos Count and Add Filter Button */}
           <Box display="flex" alignItems="center" justifyContent="space-between" mt={2} mb={2}>
             <Typography variant="body1">
